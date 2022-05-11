@@ -28,7 +28,8 @@ public final class FileCopySend {
 	 */
 	static public void main (final String[] args) throws IOException {
 		final Path sourcePath = Paths.get(args[0]);
-		int port = 0;
+//		int port = 0;
+		int port = 4711; // Test port
 		
 		if (!Files.isReadable(sourcePath)) throw new IllegalArgumentException(sourcePath.toString());
 		if(args[1] != null || args[1] != "") {
@@ -37,11 +38,8 @@ public final class FileCopySend {
 		
 		final int finPort = port;
 		
-	//	Files.copy(sourcePath, sinkPath, StandardCopyOption.REPLACE_EXISTING);
+		// Files.copy(sourcePath, sinkPath, StandardCopyOption.REPLACE_EXISTING);
 		// Server, Port only
-		
-		
-//		final PipedOutputStream output = new PipedOutputStream();
 		
 		final byte[] buffer = new byte[0x10000];
 		
@@ -56,6 +54,7 @@ public final class FileCopySend {
 //					output.write(fis.read(buffer));
 					output.write(buffer, 0, fis.read(buffer));
 				}
+				
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
 			}
