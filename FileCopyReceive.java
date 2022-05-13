@@ -27,7 +27,9 @@ public final class FileCopyReceive {
 	 * @throws IOException if there's an I/O related problem
 	 */
 	static public void main (final String[] args) throws IOException {
-		final Path destinationPath = Paths.get(args[0]);
+		final Path sinkPath = Paths.get(args[0]);
+		if (sinkPath.getParent() != null && !Files.isDirectory(sinkPath.getParent())) throw new IllegalArgumentException(sinkPath.toString());
+		
 		String ip = "127.0.0.1";
 //		int port = 0;
 		int port = 4711; // Test port
@@ -49,9 +51,6 @@ public final class FileCopyReceive {
 		final String finIP = ip;
 		final int finPort = port;
 		
-		final Path sinkPath = Paths.get(args[1]);
-		if (sinkPath.getParent() != null && !Files.isDirectory(sinkPath.getParent())) throw new IllegalArgumentException(sinkPath.toString());
-
 		// Files.copy(sourcePath, sinkPath, StandardCopyOption.REPLACE_EXISTING);
 		// Client, IP & Port
 		
@@ -68,8 +67,6 @@ public final class FileCopyReceive {
 					fos.write(buffer, 0, input.read(buffer));
 				}
 				
-				fos.close();
-				input.close();
 				System.out.println("done.");
 			} catch (IOException e) {
 				e.printStackTrace(System.err);
