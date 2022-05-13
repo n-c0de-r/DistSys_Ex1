@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,52 +32,28 @@ public final class FileCopyMultiThreaded {
 		final Path sinkPath = Paths.get(args[1]);
 		if (sinkPath.getParent() != null && !Files.isDirectory(sinkPath.getParent())) throw new IllegalArgumentException(sinkPath.toString());
 
-	//	Files.copy(sourcePath, sinkPath, StandardCopyOption.REPLACE_EXISTING);
-		final PipedOutputStream output = new PipedOutputStream();
-		final PipedInputStream input = new PipedInputStream(output);
+		// Files.copy(sourcePath, sinkPath, StandardCopyOption.REPLACE_EXISTING);
+		final PipedInputStream input = new PipedInputStream(1024*1024); // 1MB Minimum Entkopplung
+		final PipedOutputStream output = new PipedOutputStream(input);
 		
-		final byte[] buffer = new byte[0x10000];
-		
-		Runnable transporterInput = () -> {
-			try (InputStream fis = Files.newInputStream(sourcePath)) {
-				while (fis.read() != -1) {
-//					output.write(fis.read(buffer));
-					output.write(buffer, 0, fis.read(buffer));
-				}
-				fis.close();
+		final Runnable transporterInput = () -> {
+			try (OutputStream os = output) {
+				Files.copy(sourcePath, os);
 			} catch (IOException e) {
-				e.printStackTrace(System.err);
-			} finally {
-				try {
-					output.close();
-				} catch (IOException ex) {
-					ex.printStackTrace(System.err);
-				}
+				throw new UncheckedIOException(e); // Checked vs Unchecked Exceptions lesen
 			}
 		};
 		
-		Runnable transporterOutput = () -> {
-			try (OutputStream fos = Files.newOutputStream(sinkPath);){
-				while(input.read() != -1) {
-//					fos.write(input.read(buffer));
-					fos.write(buffer, 0, input.read(buffer));
-				}
-				fos.close();
-				input.close();
-				System.out.println("done.");
+		final Runnable transporterOutput = () -> {
+			try (InputStream is = input) {
+				Files.copy(is, sinkPath);
 			} catch (IOException e) {
-				e.printStackTrace(System.err);
-			} finally {
-				try {
-					input.close();
-				} catch (IOException ex) {
-					ex.printStackTrace(System.err);
-				}
+				throw new UncheckedIOException(e);
 			}
 		};
 		
-		Thread t1 = new Thread(transporterInput);
-		Thread t2 = new Thread(transporterOutput);
+		final Thread t1 = new Thread(transporterInput, "thread-read");
+		final Thread t2 = new Thread(transporterOutput, "thread-write");
 		
 		t1.start();
 		t2.start();
